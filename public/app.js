@@ -16,6 +16,7 @@ let people = [
   previous = null,
   generation = 0,
   currentRequest = null;
+let selections = {};
 function el(tag, text, cls) {
   const n = document.createElement(tag);
   if (text !== undefined) n.textContent = text;
@@ -46,7 +47,9 @@ function renderPeople() {
           : people[i].filter((x) => x !== s);
         dirty();
       });
-      label.append(check, document.createTextNode(s));
+      const category = ["Khruangbin", "Miles Davis", "Beyoncé"].includes(s) ? "artist" :
+        ["Spirited Away", "The Grand Budapest Hotel"].includes(s) ? "film" : "book or film";
+      label.append(check, document.createTextNode(`${s} (${category})`));
       chips.append(label);
     });
     field.append(chips);
@@ -66,6 +69,7 @@ function renderPeople() {
   $("add").disabled = people.length >= 4;
 }
 function dirty() {
+  selections = {};
   generation++;
   currentRequest?.abort();
   $("status").className = "";
@@ -81,6 +85,7 @@ function dirty() {
 function read() {
   return {
     mode: $("mode").value,
+    selections: { ...selections },
     people: people.map((signals) => ({ signals: [...signals] })),
     budget: $("budget").value ? Number($("budget").value) : null,
     floor: Number($("floor").value),
@@ -370,20 +375,52 @@ async function run(input) {
     });
     const data = await response.json();
     if (id !== generation) return;
-    if (!response.ok) throw new Error(data.error);
+    if (!response.ok) {
+      if (data.code === "CLARIFY" && Array.isArray(data.clarifications)) showClarifications(data.clarifications);
+      const error = new Error(data.error); error.code = data.code; throw error;
+    }
     previous = last?.data ?? null;
     last = { input: structuredClone(input), data };
     show(data);
   } catch (e) {
     if (id !== generation) return;
     $("status").className = "error";
-    $("status").textContent = e.message + " You can retry or reset.";
+    $("status").textContent = e.message + (e.code === "QLOO_RATE_LIMIT"
+      ? " Pause live requests until the provider retry window or allocation is confirmed; fixture mode remains available." : " You can retry or reset.");
   } finally {
     if (id === generation) {
       $("submit").disabled = false;
       $("submit").textContent = "Find our common ground";
     }
   }
+}
+function showClarifications(issues) {
+  const unique = [...new Map(issues.filter(issue => signals.includes(issue.signal)).map(issue => [issue.signal, issue])).values()];
+  if (!unique.length) return;
+  const panel = el("section");
+  panel.append(el("h2", "Choose the intended interests"), el("p",
+    "Qloo found multiple matches. Compare the category, year and identifier. If none is identifiable, change the interest instead. Continuing uses another live plan from the shared two-per-hour allowance."));
+  const fields = [];
+  unique.forEach((issue, index) => {
+    const label = el("label", issue.signal), select = el("select");
+    select.id = `clarification-${index}`; label.htmlFor = select.id;
+    const empty = el("option", "Choose a match"); empty.value = ""; select.append(empty);
+    const choices = [...new Map((issue.choices ?? []).map(choice => [choice.id, choice])).values()];
+    choices.forEach(choice => {
+      const option = el("option", `${choice.name} — ${choice.category}${choice.year ? `, ${choice.year}` : ""} — ${choice.id}`);
+      option.value = choice.id; select.append(option);
+    });
+    panel.append(label, select);
+    fields.push({ signal: issue.signal, select });
+  });
+  const button = el("button", "Use selected interests and retry");
+  button.type = "button"; button.disabled = true;
+  fields.forEach(({select}) => select.onchange = () => { button.disabled = fields.some(field => !field.select.value); });
+  button.onclick = () => {
+    for (const field of fields) selections[field.signal] = field.select.value;
+    run(read());
+  };
+  panel.append(button); $("results").append(panel);
 }
 $("form").onsubmit = (e) => {
   e.preventDefault();
@@ -448,6 +485,7 @@ $("replay").onclick = () => {
   $("mode").value = i.mode;
   $("mode").onchange();
   veto = i.veto;
+  selections = { ...i.selections };
   ["floor", "fairness", "scenario"].forEach((k) => ($(k).value = i[k]));
   $("budget").value = i.budget ?? "";
   ["floor", "fairness"].forEach((k) => ($(k + "Value").value = i[k]));
