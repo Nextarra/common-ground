@@ -1,0 +1,197 @@
+{
+  "purpose": "Owner-review-only prospective publication set; no publish/deploy action",
+  "files": [
+    {
+      "source": "package.json",
+      "destination": "package.json"
+    },
+    {
+      "source": "package-lock.json",
+      "destination": "package-lock.json"
+    },
+    {
+      "source": "LICENSE",
+      "destination": "LICENSE"
+    },
+    {
+      "source": "engine.mjs",
+      "destination": "engine.mjs"
+    },
+    {
+      "source": "server.mjs",
+      "destination": "server.mjs"
+    },
+    {
+      "source": "runtime-config.mjs",
+      "destination": "runtime-config.mjs"
+    },
+    {
+      "source": "qloo.mjs",
+      "destination": "qloo.mjs"
+    },
+    {
+      "source": "qloo-exec.mjs",
+      "destination": "qloo-exec.mjs"
+    },
+    {
+      "source": "qloo-runtime.mjs",
+      "destination": "qloo-runtime.mjs"
+    },
+    {
+      "source": "public/index.html",
+      "destination": "public/index.html"
+    },
+    {
+      "source": "public/app.js",
+      "destination": "public/app.js"
+    },
+    {
+      "source": "public/style.css",
+      "destination": "public/style.css"
+    },
+    {
+      "source": "public/fixtures.json",
+      "destination": "public/fixtures.json"
+    },
+    {
+      "source": "playwright.config.mjs",
+      "destination": "playwright.config.mjs"
+    },
+    {
+      "source": ".gitignore",
+      "destination": ".gitignore"
+    },
+    {
+      "source": "test/core.test.mjs",
+      "destination": "test/core.test.mjs"
+    },
+    {
+      "source": "test/exec-slice.test.mjs",
+      "destination": "test/exec-slice.test.mjs"
+    },
+    {
+      "source": "test/browser/flows.spec.mjs",
+      "destination": "test/browser/flows.spec.mjs"
+    },
+    {
+      "source": "test/browser/chart-check.spec.mjs",
+      "destination": "test/browser/chart-check.spec.mjs"
+    },
+    {
+      "source": "test/fixtures/streaming-http.mjs",
+      "destination": "test/fixtures/streaming-http.mjs"
+    },
+    {
+      "source": "vendor/qloo-exec/exec.js",
+      "destination": "vendor/qloo-exec/exec.js"
+    },
+    {
+      "source": "vendor/qloo-exec/qloo-tools.js",
+      "destination": "vendor/qloo-exec/qloo-tools.js"
+    },
+    {
+      "source": "vendor/qloo-exec/workflow-executor.js",
+      "destination": "vendor/qloo-exec/workflow-executor.js"
+    },
+    {
+      "source": "vendor/qloo-exec/resolution-provider.js",
+      "destination": "vendor/qloo-exec/resolution-provider.js"
+    },
+    {
+      "source": "vendor/qloo-exec/observability.js",
+      "destination": "vendor/qloo-exec/observability.js"
+    },
+    {
+      "source": "vendor/qloo-exec/paths.js",
+      "destination": "vendor/qloo-exec/paths.js"
+    },
+    {
+      "source": "vendor/qloo-exec/qloo-presentation.js",
+      "destination": "vendor/qloo-exec/qloo-presentation.js"
+    },
+    {
+      "source": "vendor/qloo-exec/chunks/chunk-MCLV3P4I.js",
+      "destination": "vendor/qloo-exec/chunks/chunk-MCLV3P4I.js"
+    },
+    {
+      "source": "vendor/qloo-exec/chunks/chunk-KTNGVO26.js",
+      "destination": "vendor/qloo-exec/chunks/chunk-KTNGVO26.js"
+    },
+    {
+      "source": "vendor/qloo-exec/chunks/chunk-ESNY4EJL.js",
+      "destination": "vendor/qloo-exec/chunks/chunk-ESNY4EJL.js"
+    },
+    {
+      "source": "vendor/qloo-exec/LICENSE",
+      "destination": "vendor/qloo-exec/LICENSE"
+    },
+    {
+      "source": "vendor/qloo-exec/THIRD_PARTY_NOTICES.md",
+      "destination": "vendor/qloo-exec/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "source": "vendor/qloo-exec/UPSTREAM.json",
+      "destination": "vendor/qloo-exec/UPSTREAM.json"
+    },
+    {
+      "source": "vendor/qloo-exec/README.md",
+      "destination": "vendor/qloo-exec/README.md"
+    },
+    {
+      "source": "hosting/healthcheck.mjs",
+      "destination": "hosting/healthcheck.mjs"
+    },
+    {
+      "source": "hosting/compose.local.yaml",
+      "destination": "hosting/compose.local.yaml"
+    },
+    {
+      "source": "hosting/runtime.env.example",
+      "destination": "hosting/runtime.env.example"
+    },
+    {
+      "source": "hosting/nginx.example.conf",
+      "destination": "hosting/nginx.example.conf"
+    },
+    {
+      "source": "hosting/common-ground.service.example",
+      "destination": "hosting/common-ground.service.example"
+    },
+    {
+      "source": "hosting/PUBLICATION_ALLOWLIST.json",
+      "destination": "hosting/PUBLICATION_ALLOWLIST.json"
+    },
+    {
+      "source": "hosting/prepare-publication.mjs",
+      "destination": "hosting/prepare-publication.mjs"
+    },
+    {
+      "source": "hosting/PUBLIC_README.md",
+      "destination": "README.md"
+    },
+    {
+      "source": "hosting/Dockerfile",
+      "destination": "Dockerfile"
+    },
+    {
+      "source": "hosting/dockerignore",
+      "destination": ".dockerignore"
+    },
+    {
+      "source": "hosting/Dockerfile",
+      "destination": "hosting/Dockerfile"
+    },
+    {
+      "source": "hosting/dockerignore",
+      "destination": "hosting/dockerignore"
+    },
+    {
+      "source": "hosting/PUBLIC_README.md",
+      "destination": "hosting/PUBLIC_README.md"
+    },
+    {
+      "source": "test/hosting.test.mjs",
+      "destination": "test/hosting.test.mjs"
+    }
+  ]
+}

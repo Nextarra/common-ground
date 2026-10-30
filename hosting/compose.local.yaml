@@ -1,0 +1,29 @@
+# Local-only fixture rehearsal. This file does not deploy or publish anything.
+services:
+  common-ground:
+    image: common-ground:local-review
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    init: true
+    restart: "no"
+    ports:
+      - "127.0.0.1:4173:4173"
+    environment:
+      PORT: "4173"
+      COMMON_GROUND_BIND: "0.0.0.0"
+      COMMON_GROUND_ORIGIN: "http://127.0.0.1:4173"
+      COMMON_GROUND_ENABLE_LIVE: "0"
+      COMMON_GROUND_MAX_ACTIVE: "8"
+      COMMON_GROUND_MAX_LIVE_PLANS: "20"
+      COMMON_GROUND_WINDOW_MS: "3600000"
+      COMMON_GROUND_PLAN_TIMEOUT_MS: "55000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1
+    stop_grace_period: 60s
