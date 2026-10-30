@@ -4,6 +4,21 @@ import {
   QlooClientError,
 } from "./vendor/qloo-exec/chunks/chunk-ESNY4EJL.js";
 import { createDirectQlooWorkflowExecutor } from "./vendor/qloo-exec/qloo-tools.js";
+import { createNativeQlooResolutionProvider } from "./vendor/qloo-exec/resolution-provider.js";
+const musicSeeds = new Set(["Khruangbin", "Miles Davis", "Beyoncé"]);
+export function createAppResolutionProvider(client) {
+  const native = createNativeQlooResolutionProvider(client);
+  return {
+    ...native,
+    async resolveEntities(request, context) {
+      const groups = await Promise.all(request.inputs.map(input => native.resolveEntities({
+        ...request, inputs: [input],
+        ...(!request.type && musicSeeds.has(input) ? { type: "urn:entity:artist" } : {}),
+      }, context)));
+      return { outcomes: groups.flatMap(group => group.outcomes) };
+    },
+  };
+}
 const record = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -74,6 +89,7 @@ export class StrictQlooClient extends QlooClient {
 }
 export function createAppExecutor(apiKey, baseUrl = "https://api.qloo.com") {
   if (typeof apiKey !== "string" || !apiKey.trim()) return undefined;
-  // No home configuration, model runtime, custom resolver or workflow log files.
-  return createDirectQlooWorkflowExecutor(new StrictQlooClient({ apiKey, baseUrl }));
+  // Fixed app seed categories; no home configuration, model runtime or log files.
+  const client = new StrictQlooClient({ apiKey, baseUrl });
+  return createDirectQlooWorkflowExecutor(client, undefined, createAppResolutionProvider(client));
 }
