@@ -1,0 +1,156 @@
+{
+  "provenance": "Authored fictional places and synthetic cultural scores. This is constructed test data, never Qloo provider output.",
+  "signals": [
+    "Khruangbin",
+    "Spirited Away",
+    "Beyoncé",
+    "The Grand Budapest Hotel",
+    "Miles Davis",
+    "Dune"
+  ],
+  "places": [
+    {
+      "id": "f1",
+      "name": "Listening Garden",
+      "kind": "Garden + listening lounge",
+      "cost": 25,
+      "description": "An illustrated concept: outdoor art followed by a listening session.",
+      "scores": [
+        90,
+        82,
+        55,
+        69,
+        92,
+        48
+      ]
+    },
+    {
+      "id": "f2",
+      "name": "Neon Table",
+      "kind": "Food + design",
+      "cost": 40,
+      "description": "An illustrated concept: a shared tasting table in a graphic design space.",
+      "scores": [
+        75,
+        79,
+        91,
+        93,
+        48,
+        77
+      ]
+    },
+    {
+      "id": "f3",
+      "name": "Orbit Cinema",
+      "kind": "Film + conversation",
+      "cost": 20,
+      "description": "An illustrated concept: a small cinema and a post-film conversation.",
+      "scores": [
+        44,
+        94,
+        60,
+        89,
+        50,
+        96
+      ]
+    },
+    {
+      "id": "f4",
+      "name": "Blue Room",
+      "kind": "Music + supper",
+      "cost": 55,
+      "description": "An illustrated concept: a music-led evening with a supper break.",
+      "scores": [
+        94,
+        40,
+        84,
+        45,
+        97,
+        38
+      ]
+    },
+    {
+      "id": "f5",
+      "name": "Paper Lantern",
+      "kind": "Art + tea",
+      "cost": 18,
+      "description": "An illustrated concept: an art workshop and tea together.",
+      "scores": [
+        81,
+        92,
+        65,
+        86,
+        76,
+        74
+      ]
+    },
+    {
+      "id": "f6",
+      "name": "Skyline Social",
+      "kind": "Design + discovery",
+      "cost": 65,
+      "description": "An illustrated concept: a design exhibition and conversation space.",
+      "scores": [
+        62,
+        67,
+        95,
+        85,
+        42,
+        87
+      ]
+    }
+  ],
+  "tradeoff": {
+    "description": "Constructed two-person case using Khruangbin and Spirited Away. Average-first favors [100,40]; lowest-rank weighting favors [60,60]. Change preferences or weight to recompute; no universal advantage is claimed.",
+    "scores": {
+      "f1": [
+        100,
+        40,
+        55,
+        69,
+        92,
+        48
+      ],
+      "f2": [
+        80,
+        20,
+        91,
+        93,
+        48,
+        77
+      ],
+      "f3": [
+        60,
+        60,
+        60,
+        89,
+        50,
+        96
+      ],
+      "f4": [
+        40,
+        0,
+        84,
+        45,
+        97,
+        38
+      ],
+      "f5": [
+        20,
+        80,
+        65,
+        86,
+        76,
+        74
+      ],
+      "f6": [
+        0,
+        100,
+        95,
+        85,
+        42,
+        87
+      ]
+    }
+  }
+}
