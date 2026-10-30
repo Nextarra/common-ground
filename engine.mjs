@@ -30,6 +30,11 @@ export function validate(input) {
     return { label: `Person ${i + 1}`, signals: [...new Set(p.signals)] };
   });
   const budget = input.budget ?? null;
+  const selections = input.selections ?? {};
+  if (!selections || typeof selections !== "object" || Array.isArray(selections) ||
+      Object.keys(selections).length > signals.length || Object.entries(selections).some(([name, id]) =>
+        !signals.includes(name) || typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))
+    throw new Problem("INPUT", "Choose an entity from the offered clarification choices.");
   if (budget !== null && ![20, 30, 60].includes(budget))
     throw new Problem("INPUT", "Unsupported budget.");
   const floor = input.floor ?? 0;
@@ -54,6 +59,7 @@ export function validate(input) {
     throw new Problem("INPUT", "Invalid simulation.");
   return {
     people,
+    selections: { ...selections },
     budget,
     floor,
     fairness,

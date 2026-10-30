@@ -4,6 +4,17 @@ import { fileURLToPath } from "node:url";
 import { Problem, relativeRankPoints, signals } from "./engine.mjs";
 const exec = promisify(execFile);
 const bin = fileURLToPath(new URL("./qloo-exec.mjs", import.meta.url));
+export function decodeFailure(text) {
+  let envelope;
+  try {envelope=JSON.parse(text);} catch {return undefined;}
+  if(envelope?.error?.code !== "QLOO_RATE_LIMIT") return undefined;
+  const diagnostics = (Array.isArray(envelope.diagnostics) ? envelope.diagnostics : []).slice(0,64)
+    .filter(item => item && ["/search","/entities","/v2/insights"].includes(item.path) && Number.isInteger(item.status) && item.status >= 100 && item.status <= 599)
+    .map(item => ({path:item.path,status:item.status,retryAfterMs:Number.isSafeInteger(item.retryAfterMs)&&item.retryAfterMs>=0?item.retryAfterMs:null}));
+  const problem=new Problem("QLOO_RATE_LIMIT","Qloo returned HTTP 429. Stop live requests until the provider's retry window or allocation is confirmed.",429);
+  problem.diagnostics=diagnostics;
+  return problem;
+}
 export function decodeEnvelope(text, operation) {
   let e;
   try {
@@ -35,10 +46,20 @@ export function decodeEnvelope(text, operation) {
       const evidence = kind === "ambiguous" ? ` [${candidates.length} choices; ${exact.length} exact names; ${uniqueExact} distinct exact IDs; types ${types.join(", ") || "none"}]` : "";
       return `${subject}: ${kind}${evidence}`;
     });
-    throw new Problem(
+    const problem = new Problem(
       "CLARIFY",
       `Qloo ${stage} needs clarification${details.length ? ` (${[...new Set(details)].join("; ")})` : ""}. No fixture fallback was used.`,
     );
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    problem.clarifications = issues.filter(issue => issue?.field === "signals" && signals.includes(issue.input))
+      .map(issue => ({ signal: issue.input, choices: (Array.isArray(issue.candidates) ? issue.candidates : []).slice(0, 5)
+        .filter(candidate => candidate && uuid.test(candidate.id) && typeof candidate.name === "string")
+        .map(candidate => ({ id: candidate.id, name: candidate.name.slice(0, 120),
+          category: ["artist", "movie", "book", "person", "place", "brand", "podcast", "tv_show", "video_game"]
+            .find(type => candidate.type === `urn:entity:${type}`) ?? "other",
+          year: Number.isInteger(candidate.release_year) && candidate.release_year >= 1800 && candidate.release_year <= 2200
+            ? candidate.release_year : null })) }));
+    throw problem;
   }
   if (!["ok", "empty"].includes(e.status))
     throw new Problem(
@@ -57,7 +78,7 @@ export function decodeEnvelope(text, operation) {
     throw new Problem("UPSTREAM_SCHEMA", "Qloo entity structure changed.", 502);
   return e.results;
 }
-export async function harness(operation, input, { signal } = {}) {
+export async function harness(operation, input, { signal, selections = {} } = {}) {
   if (!process.env.QLOO_API_KEY)
     throw new Problem(
       "KEY_REQUIRED",
@@ -71,7 +92,7 @@ export async function harness(operation, input, { signal } = {}) {
       {
         timeout: 25000,
         maxBuffer: 1024 * 1024,
-        env: process.env,
+        env: { ...process.env, COMMON_GROUND_ENTITY_SELECTIONS: JSON.stringify(selections) },
         signal,
         cwd: fileURLToPath(new URL(".", import.meta.url)),
       },
@@ -80,6 +101,8 @@ export async function harness(operation, input, { signal } = {}) {
   } catch (e) {
     if (signal?.aborted) throw signal.reason;
     if (e instanceof Problem) throw e;
+    const rateLimit=decodeFailure(e.stdout);
+    if(rateLimit) throw rateLimit;
     throw new Problem(
       e.killed ? "UPSTREAM_TIMEOUT" : "UPSTREAM",
       "Qloo request failed. Check the server key, quota and network access, then retry. No automatic fallback.",
@@ -90,7 +113,20 @@ export async function harness(operation, input, { signal } = {}) {
 export class QlooAdapter {
   mode = "live";
   constructor(call = harness) {
-    this.call = call;
+    let queue = Promise.resolve(), failure;
+    const cache = new Map();
+    this.call = (operation, input, options) => {
+      const key=JSON.stringify([operation,input,options?.selections ?? {}]);
+      if(cache.has(key)) return cache.get(key).then(value => structuredClone(value));
+      const result = queue.then(() => {
+        options?.signal?.throwIfAborted();
+        if (failure) throw failure;
+        return call(operation, input, options);
+      });
+      queue = result.catch(error => { failure = error; });
+      cache.set(key,result);
+      return result.then(value => structuredClone(value));
+    };
   }
   async discover(person, input, options) {
     const r = await this.call(
@@ -102,7 +138,7 @@ export class QlooAdapter {
         limit: 6,
         explain: true,
       },
-      options,
+      { ...options, selections: input.selections },
     );
     return r.map((x) => ({
       id: x.entity_id,
@@ -133,7 +169,7 @@ export class QlooAdapter {
         options: candidates.map((c) => c.id),
         signals: person.signals,
       },
-      options,
+      { ...options, selections: options?.input?.selections },
     );
     const expected = new Set(candidates.map((c) => c.id));
     if (

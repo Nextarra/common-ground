@@ -7,12 +7,17 @@ try {
     process.stderr.write("Supported app workflows: recommend, rank.\n");
     process.exitCode = 2;
   } else {
+    let executor;
     process.exitCode = await runQlooExec(process.argv.slice(2), {
       env: process.env,
       stdin: process.stdin,
       stdinIsTTY: process.stdin.isTTY === true,
-      createExecutor: () => createAppExecutor(process.env.QLOO_API_KEY, process.env.QLOO_BASE_URL),
-      writeOut: (text) => process.stdout.write(text),
+      createExecutor: () => executor = createAppExecutor(process.env.QLOO_API_KEY, process.env.QLOO_BASE_URL,
+        JSON.parse(process.env.COMMON_GROUND_ENTITY_SELECTIONS || "{}")),
+      writeOut: (text) => {
+        try {const result=JSON.parse(text); process.stdout.write(JSON.stringify({...result, diagnostics:executor?.readDiagnostics() ?? []})+"\n");}
+        catch {process.stdout.write(text);}
+      },
       writeError: (text) => process.stderr.write(text),
     });
   }

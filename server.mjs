@@ -243,6 +243,10 @@ export function createServer({
         res.shouldKeepAlive = false;
       send(error instanceof Problem ? error.status : 500, {
         code: error.code ?? "INTERNAL",
+          ...(error instanceof Problem && error.code === "CLARIFY" && Array.isArray(error.clarifications)
+            ? { clarifications: error.clarifications } : {}),
+          ...(error instanceof Problem && error.code === "QLOO_RATE_LIMIT" && Array.isArray(error.diagnostics)
+            ? { diagnostics: error.diagnostics } : {}),
         error:
           error instanceof Problem
             ? error.message
