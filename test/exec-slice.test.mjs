@@ -11,10 +11,30 @@ import {
   StrictQlooClient,
   assertEntityResponse,
   createAppExecutor,
+  createAppResolutionProvider,
 } from "../qloo-runtime.mjs";
 const SIGNAL = "00000000-0000-4000-8000-000000000001",
   A = "00000000-0000-4000-8000-000000000002",
   B = "00000000-0000-4000-8000-000000000003";
+test("app scopes music seeds while preserving genuine artist ambiguity and other scopes", async () => {
+  const calls = [];
+  const client = { searchEntities: async query => {
+    calls.push(query);
+    const rows = [
+      { entity_id: SIGNAL, name: query.query, type: "urn:entity:artist" },
+      { entity_id: A, name: query.query, type: "urn:entity:person" },
+      ...(query.query === "Beyoncé" ? [{entity_id:B,name:query.query,type:"urn:entity:artist"}] : []),
+    ];
+    return { results: rows.filter(row => !query.types || row.type === query.types) };
+  }};
+  const provider = createAppResolutionProvider(client);
+  const result = await provider.resolveEntities({ inputs: ["Khruangbin", "Miles Davis", "Beyoncé", "Dune"] }, {});
+  assert.deepEqual(result.outcomes.map(x => x.status), ["resolved", "resolved", "ambiguous", "ambiguous"]);
+  assert.deepEqual(calls.map(x => x.types), ["urn:entity:artist", "urn:entity:artist", "urn:entity:artist", undefined]);
+  assert.equal(result.outcomes[2].candidates.length, 2);
+  await provider.resolveEntities({inputs:["Khruangbin"],type:"urn:entity:person"},{});
+  assert.equal(calls.at(-1).types,"urn:entity:person");
+});
 test("event endpoint is explicit and cannot widen key transmission", async () => {
   const calls = [];
   const client = new StrictQlooClient({
