@@ -1,5 +1,43 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+test("provider rate limit pauses live guidance without automatic retry",async({page})=>{
+  let calls=0;
+  await page.route("**/api/plan",async route=>{calls++;await route.fulfill({status:429,contentType:"application/json",body:JSON.stringify({code:"QLOO_RATE_LIMIT",error:"Qloo returned HTTP 429. Stop live requests until the provider retry window is confirmed."})});});
+  await page.goto("/");await page.locator("#submit").click();
+  await expect(page.locator("#status")).toContainText("Pause live requests");
+  await expect(page.locator("#status")).not.toContainText("You can retry");
+  expect(calls).toBe(1);
+});
+test("live clarification requires explicit choice, renders inert text and clears on reset", async ({page}) => {
+  const calls=[];
+  const id="00000000-0000-4000-8000-000000000001";
+  await page.route("**/api/plan", async route => {
+    calls.push(route.request().postDataJSON());
+    await route.fulfill({status:422,contentType:"application/json",body:JSON.stringify({code:"CLARIFY",error:"Choose an intended entity.",clarifications:[{signal:"Spirited Away",choices:[{id,name:"<img src=x onerror=alert(1)>",category:"movie",year:2001},{id:"00000000-0000-4000-8000-000000000002",name:"Spirited Away",category:"movie",year:2023}]}]})});
+  });
+  await page.goto("/");
+  await page.getByText("Data source & failure rehearsal").click();
+  await page.locator("#mode").selectOption("live");
+  await page.locator("#submit").click();
+  await expect(page.getByRole("heading",{name:"Choose the intended interests"})).toBeVisible();
+  const retry=page.getByRole("button",{name:"Use selected interests and retry"});
+  await expect(retry).toBeDisabled();
+  await expect(page.locator("#results img")).toHaveCount(0);
+  await expect(page.locator("#results")).toContainText("two-per-hour allowance");
+  expect(calls).toHaveLength(1);
+  await page.getByLabel("Spirited Away",{exact:true}).selectOption(id);
+  await expect(retry).toBeEnabled();
+  const axe=await new AxeBuilder({page}).analyze();
+  expect(axe.violations).toEqual([]);
+  await retry.click();
+  await expect.poll(()=>calls.length).toBe(2);
+  expect(calls[1].selections).toEqual({"Spirited Away":id});
+  await page.getByRole("button",{name:"Reset everything"}).click();
+  await expect(page.getByRole("heading",{name:"Choose the intended interests"})).toHaveCount(0);
+  await page.locator("#submit").click();
+  await expect.poll(()=>calls.length).toBe(3);
+  expect(calls[2].selections).toEqual({});
+});
 test("complete plan, veto, revision, replay, reset and export", async ({
   page,
 }) => {
