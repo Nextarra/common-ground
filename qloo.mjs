@@ -26,7 +26,14 @@ export function decodeEnvelope(text, operation) {
       const subject = issue?.field === "options" ? "place identifier" :
         issue?.field === "signals" && signals.includes(issue?.input) ? issue.input : "input";
       const kind = issue?.kind === "not_found" ? "not found" : issue?.kind === "ambiguous" ? "ambiguous" : "unresolved";
-      return `${subject}: ${kind}`;
+      const candidates = Array.isArray(issue?.candidates) ? issue.candidates.slice(0, 5) : [];
+      const normal = value => typeof value === "string" ? value.normalize("NFKC").trim().toLocaleLowerCase("en-US") : "";
+      const exact = candidates.filter(candidate => normal(candidate?.name) && normal(candidate.name) === normal(issue?.input));
+      const knownTypes = new Map(["artist", "book", "brand", "movie", "person", "place", "podcast", "tv_show", "video_game"].map(type => [`urn:entity:${type}`, type]));
+      const types = [...new Set(candidates.map(candidate => knownTypes.get(candidate?.type) ?? "other"))];
+      const uniqueExact = new Set(exact.map(candidate => candidate?.id).filter(id => typeof id === "string")).size;
+      const evidence = kind === "ambiguous" ? ` [${candidates.length} choices; ${exact.length} exact names; ${uniqueExact} distinct exact IDs; types ${types.join(", ") || "none"}]` : "";
+      return `${subject}: ${kind}${evidence}`;
     });
     throw new Problem(
       "CLARIFY",
