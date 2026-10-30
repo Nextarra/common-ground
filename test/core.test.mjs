@@ -21,6 +21,22 @@ test("clarification distinguishes missing seeds from ambiguous place identifiers
   assert.throws(() => decodeEnvelope(envelope([null,{field:"signals",input:"PRIVATE_SENTINEL",kind:"PRIVATE_SENTINEL"}]), "PRIVATE_SENTINEL"),
     e => e.code === "CLARIFY" && e.message.includes("input: unresolved") && !e.message.includes("PRIVATE_SENTINEL"));
 });
+test("ambiguity diagnostics expose only bounded counts and fixed category labels", () => {
+  const candidates = [
+    {id:"PRIVATE_ID_A",name:"Khruangbin",type:"urn:entity:artist"},
+    {id:"PRIVATE_ID_A",name:" khruangbin ",type:"urn:entity:artist"},
+    {id:"PRIVATE_ID_B",name:"Khruangbin",type:"urn:entity:book"},
+    {id:"PRIVATE_ID_C",name:"PRIVATE_SENTINEL",type:"PRIVATE_SENTINEL"},
+  ];
+  const envelope = JSON.stringify({status:"needs_input",resolution:{issues:[{field:"signals",input:"Khruangbin",kind:"ambiguous",candidates}]}});
+  assert.throws(() => decodeEnvelope(envelope,"recommend"), e => {
+    assert.match(e.message,/4 choices; 3 exact names; 2 distinct exact IDs; types artist, book, other/);
+    assert(!e.message.includes("PRIVATE_"));
+    return e.code === "CLARIFY";
+  });
+  const oversized = JSON.stringify({status:"needs_input",resolution:{issues:Array(100).fill({field:"signals",input:"Khruangbin",kind:"ambiguous",candidates:Array(100).fill(candidates[0])})}});
+  assert.throws(() => decodeEnvelope(oversized,"recommend"), e => e.message.includes("5 choices; 5 exact names; 1 distinct exact IDs") && e.message.length < 300);
+});
 test("fixture full loop, provenance and repeatability", async () => {
   const a = await plan(base()),
     b = await plan(base());
