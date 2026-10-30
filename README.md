@@ -2,7 +2,7 @@
 
 An agentic taste-consensus prototype for two to four people planning one shared Houston experience. Explicit cultural seeds drive separate discovery and ranking, with an inspectable lowest-rank/mean compromise and revision loop.
 
-**Default mode is clearly labelled fictional fixtures. No live integration success is claimed.** The constructed rehearsal demonstrates a ranking trade-off, never measured enjoyment. Prices, hours, booking and accessibility are unverified.
+**Default mode is clearly labelled fictional fixtures. Live Qloo integration was verified privately and on the public Render deployment on October 30, 2026.** The constructed rehearsal demonstrates a ranking trade-off, never measured enjoyment. Prices, hours, booking and accessibility are unverified.
 
 ## Run
 
@@ -27,7 +27,7 @@ The supplied Compose file publishes only 127.0.0.1:4173, disables live access, r
 
 ## Hosted demo and runtime configuration
 
-Public source: https://github.com/Nextarra/common-ground . Demo: https://common-ground-deou.onrender.com . The approved Render Free Docker service has a private server-side event credential and live mode enabled. Anonymous fixtures and rejection controls have been checked. As of October 30, music-seed discovery succeeds, but the default full live flow still stops for ambiguous film entities; no complete live recommendation success is claimed. This candidate adds explicit film categories and user clarification locally; hosted verification remains required.
+Public source: https://github.com/Nextarra/common-ground . Demo: https://common-ground-deou.onrender.com . The approved Render Free Docker service has a private server-side event credential and live mode enabled. Anonymous access, fixtures, origin enforcement and private-path rejection passed. Tested commit d634e46632767eed98ed03d6965b2b5424de614f completed real hosted recommendations, Dune clarification, explicit selection, stale-choice rejection, veto/cutoff revision, cancellation and subsequent recovery. The default browser run returned ten candidates; an explicit Dune 2021-film selection returned eight. These are observed test results, not availability or enjoyment guarantees.
 
 Choose a long-running Linux VM or container host supporting Node child processes, a 55s request window, health checks and HTTPS termination. The Node server defaults to 127.0.0.1; container bind 0.0.0.0 requires an explicit COMMON_GROUND_ORIGIN. Set that origin to the exact approved HTTPS hostname and preserve Host at the proxy. Forwarded headers are not trusted for authorization.
 
@@ -37,7 +37,7 @@ Hosted configuration: 16KB input, eight active plans, one concurrent live plan, 
 
 Music interests are scoped to artists and the two explicitly labelled film interests to movies. Dune remains book-or-film. Distinct matches are never resolved by selecting the first result: choose a displayed candidate using category, available year and identifier, or change the interest if it cannot be identified. Choices are revalidated against current provider results on every retry; stale or unavailable choices remain unresolved. No provider descriptions, headers or credentials are included in clarification choices.
 
-The local candidate serializes workflows and HTTP calls, batches current shortlist IDs for native identity validation, and reuses identical workflows only within the current plan. A default two-person/two-seed complete flow now needs at most14 HTTP requests instead of32 at a ten-place shortlist; actual counts depend on resolution and early failures. A 429 stops queued work and preserves only endpoint path, HTTP status and parsed Retry-After duration. No automatic retry is made. Private testing at17:54UTC confirmed an upstream429; its reset/allocation metadata was not captured, so provider recovery remains unverified. These local changes require fresh private and hosted validation before any full-live success claim.
+The deployed implementation serializes workflows and HTTP calls, batches current shortlist IDs for native identity validation, and reuses identical workflows only within the current plan. A default two-person/two-seed complete flow now needs at most 14 HTTP requests instead of 32 at a ten-place shortlist; actual counts depend on resolution and early failures. A 429 stops queued work and preserves only endpoint path, HTTP status and parsed Retry-After duration. No automatic retry is made. A private attempt encountered upstream 429 at 17:54 UTC. Recovery was confirmed by a 200 probe at 18:28 UTC, followed by successful private and hosted tests. The provider quota, expiry and reset schedule remain unknown. The fourteen-call bound is covered offline; live ledgers do not independently measure every upstream request.
 
 ## Qloo implementation and provenance
 
@@ -48,5 +48,11 @@ The source allowlist deliberately excludes private session records, private evid
 The tested local recipe uses Node 24.22.2 (native Undici 7.30.1), based on pinned node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c. Recheck support/security updates before an owner-approved public release; this pin is reproducible, not a promise of perpetual security.
 # Event endpoint configuration (October 30 local revision)
 
-Set the server-only `QLOO_BASE_URL=https://hackathon.api.qloo.com` when using the event-issued credential. The default remains the production origin. Only these two exact HTTPS origins are accepted; redirects are not followed and arbitrary custom origins are rejected. Inject `QLOO_API_KEY` privately at runtime and explicitly enable live mode only after verifying entitlement and quota. This revision has offline contract coverage; real API success has not yet been verified.
+Set the server-only `QLOO_BASE_URL=https://hackathon.api.qloo.com` when using the event-issued credential. The default remains the production origin. Only these two exact HTTPS origins are accepted; redirects are not followed and arbitrary custom origins are rejected. Inject `QLOO_API_KEY` privately at runtime and explicitly enable live mode only after verifying entitlement and quota. This revision has offline contract coverage and recorded private/hosted real API success.
 
+
+## Verification record and remaining access limitation
+
+On October 30, the final candidate had 63 fresh offline passes; the unchanged Windows symlink security assertion retains a separately recorded elevated pass. The fresh unprivileged run encountered EPERM for that fixture and is not described as a fresh all-pass run. Fifteen browser scenarios passed, plus the final rate-guidance wording check. Hosted cancellation evidence shows client abort followed by successful recovery, not proof of the exact upstream call count.
+
+The public service is restored to two attempted live plans per process-local hour. This shared allowance can prevent judges from testing and must be reconciled with event access requirements before claiming submission readiness. Render Free can sleep or suspend on quota exhaustion. No unrestricted judging access or continuous uptime is promised.
