@@ -1,0 +1,85 @@
+{
+  "package": "@qloo/qloo-harness",
+  "version": "0.1.26",
+  "registry": "https://registry.npmjs.org/@qloo/qloo-harness",
+  "tarballIntegrity": "sha512-UKTIATukMMcQZ7MQOVQ+iqI4yW8oRh9jQxQzOSuuNPmF6mTQrVFs2yyIKOhLssOggw786fR1cNEX8HhbqRS/cA==",
+  "distribution": "unchanged exec-only MIT source slice; local wrapper is not official CLI",
+  "externalNpmImports": [
+    "typebox",
+    "typebox/value"
+  ],
+  "files": [
+    {
+      "upstreamPath": "dist/exec.js",
+      "path": "exec.js",
+      "bytes": 9679,
+      "sha256": "8501195c784a40f6dcbe5a01f2b15275333ac343d3b263f824d8279c4d646cfa"
+    },
+    {
+      "upstreamPath": "dist/qloo-tools.js",
+      "path": "qloo-tools.js",
+      "bytes": 41873,
+      "sha256": "4b4d41006a5cad3f088fe61894952f950e047b3b0b7ccac8037c891b60727d38"
+    },
+    {
+      "upstreamPath": "dist/workflow-executor.js",
+      "path": "workflow-executor.js",
+      "bytes": 11166,
+      "sha256": "5616b256168b727d4094c6899a41956c50b873143a9c31b25e6f9b69b5eae015"
+    },
+    {
+      "upstreamPath": "dist/resolution-provider.js",
+      "path": "resolution-provider.js",
+      "bytes": 44025,
+      "sha256": "f905e1753a2f1516931ea313ef995807be09fb0759386bc7b8642555542b714a"
+    },
+    {
+      "upstreamPath": "dist/observability.js",
+      "path": "observability.js",
+      "bytes": 3224,
+      "sha256": "a3c4cd84da49ccd76e424099e2f3057b01f66b5360502922e975875a4a355e42"
+    },
+    {
+      "upstreamPath": "dist/paths.js",
+      "path": "paths.js",
+      "bytes": 2971,
+      "sha256": "cc737a97369de96cbfd37a7de4a5955fb88234d784d09389c141cc7bb153c88f"
+    },
+    {
+      "upstreamPath": "dist/qloo-presentation.js",
+      "path": "qloo-presentation.js",
+      "bytes": 18136,
+      "sha256": "7990473f0c6d528b22be7449a1a60afbf040aa03f093ae2460895dd48adb6f0c"
+    },
+    {
+      "upstreamPath": "dist/chunks/chunk-MCLV3P4I.js",
+      "path": "chunks/chunk-MCLV3P4I.js",
+      "bytes": 33810,
+      "sha256": "d22a95aa067cf919de4a7f28e9275e385897bf3616681d187f5dfc6bbb927353"
+    },
+    {
+      "upstreamPath": "dist/chunks/chunk-KTNGVO26.js",
+      "path": "chunks/chunk-KTNGVO26.js",
+      "bytes": 1910,
+      "sha256": "14ab4bf371a7eadedbec32d62f54fd00288d80cd914936ad588c3fa450c060d1"
+    },
+    {
+      "upstreamPath": "dist/chunks/chunk-ESNY4EJL.js",
+      "path": "chunks/chunk-ESNY4EJL.js",
+      "bytes": 28802,
+      "sha256": "09d927f8e1aaca5d1700980d62de5270b2841b1e56b3aaf3478875c8afa0c7e2"
+    },
+    {
+      "upstreamPath": "LICENSE",
+      "path": "LICENSE",
+      "bytes": 1061,
+      "sha256": "228669014761061b3741c8a63032a7e3d11cf4d45ba007fd93d3b5291b6e675a"
+    },
+    {
+      "upstreamPath": "THIRD_PARTY_NOTICES.md",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "bytes": 1993,
+      "sha256": "639784cfd8c38288b6b6c3b196c4adab2da1fb5145429d17d45a775b363c8967"
+    }
+  ]
+}
