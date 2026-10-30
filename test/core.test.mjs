@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import { plan, validate, FixtureAdapter, Problem } from "../engine.mjs";
-import { QlooAdapter, decodeEnvelope, harness } from "../qloo.mjs";
+import { QlooAdapter, decodeEnvelope, decodeFailure, harness } from "../qloo.mjs";
 import { createServer } from "../server.mjs";
 const base = () => ({
   people: [
@@ -12,6 +12,42 @@ const base = () => ({
   floor: 40,
   fairness: 80,
 });
+test("adapter serializes workflows, reuses exact results within a plan and stops after failure",async()=>{
+  let calls=0,active=0,peak=0;
+  const adapter=new QlooAdapter(async()=>{calls++;active++;peak=Math.max(peak,active);await new Promise(r=>setTimeout(r,5));active--;return [{entity_id:"id",name:"Place"}];});
+  const input=validate(base());
+  const [a,b]=await Promise.all([adapter.discover(input.people[0],input,{}),adapter.discover(input.people[0],input,{})]);
+  assert.equal(calls,1);assert.equal(peak,1);a[0].name="changed";assert.equal(b[0].name,"Place");
+  let failedCalls=0;
+  const bad=new QlooAdapter(async()=>{failedCalls++;throw new Problem("QLOO_RATE_LIMIT","Stop",429);});
+  const failed=await Promise.allSettled(input.people.map(person=>bad.discover(person,input,{})));
+  assert(failed.every(result=>result.status==="rejected"));
+  assert.equal(failedCalls,1);
+});
+test("rate-limit failure only exposes bounded path/status/retry timing",()=>{
+  const failure=decodeFailure(JSON.stringify({error:{code:"QLOO_RATE_LIMIT",recovery:"PRIVATE_SENTINEL"},diagnostics:[{path:"/search",status:429,retryAfterMs:1000,key:"PRIVATE_SENTINEL"},{path:"https://bad/private",status:429},{path:"/entities",status:200,retryAfterMs:-1}]}));
+  assert.equal(failure.status,429);
+  assert.deepEqual(failure.diagnostics,[{path:"/search",status:429,retryAfterMs:1000},{path:"/entities",status:200,retryAfterMs:null}]);
+  assert(!JSON.stringify(failure).includes("PRIVATE_SENTINEL"));
+  assert.equal(decodeFailure('broken'),undefined);
+});
+test("clarification choices are bounded public fields and selections are validated", async () => {
+  const id="00000000-0000-4000-8000-000000000001";
+  const candidate={id,name:"Spirited Away",type:"urn:entity:movie",release_year:2001,description:"PRIVATE_SENTINEL",headers:"PRIVATE_SENTINEL"};
+  let problem;
+  try { decodeEnvelope(JSON.stringify({status:"needs_input",resolution:{issues:[{field:"signals",input:"Spirited Away",kind:"ambiguous",candidates:[candidate]}]}}),"recommend"); } catch(e) {problem=e;}
+  assert.deepEqual(problem.clarifications,[{signal:"Spirited Away",choices:[{id,name:"Spirited Away",category:"movie",year:2001}]}]);
+  assert(!JSON.stringify(problem).includes("PRIVATE_SENTINEL"));
+  assert.deepEqual(validate({...base(),selections:{"Spirited Away":id}}).selections,{"Spirited Away":id});
+  for(const selections of [null,[],{unknown:id},{"Spirited Away":"not-an-id"}])
+    if(selections!==null) assert.throws(()=>validate({...base(),selections}),{code:"INPUT"});
+  const calls=[];
+  const adapter=new QlooAdapter(async(op,input,options)=>{calls.push({op,options});return [];});
+  const input=validate({...base(),selections:{"Spirited Away":id}});
+  await adapter.discover(input.people[0],input,{});
+  await adapter.rank(input.people[0],[],{input});
+  assert(calls.every(call=>call.options.selections["Spirited Away"]===id));
+});
 test("clarification distinguishes missing seeds from ambiguous place identifiers without echoing provider data", () => {
   const envelope = (issues) => JSON.stringify({status:"needs_input",summary:"PRIVATE_SENTINEL",resolution:{issues}});
   assert.throws(() => decodeEnvelope(envelope([{field:"signals",input:"Khruangbin",kind:"not_found"}]), "recommend"),
@@ -20,6 +56,22 @@ test("clarification distinguishes missing seeds from ambiguous place identifiers
     e => e.code === "CLARIFY" && e.message.includes("ranking") && e.message.includes("place identifier: ambiguous") && !e.message.includes("PRIVATE_SENTINEL"));
   assert.throws(() => decodeEnvelope(envelope([null,{field:"signals",input:"PRIVATE_SENTINEL",kind:"PRIVATE_SENTINEL"}]), "PRIVATE_SENTINEL"),
     e => e.code === "CLARIFY" && e.message.includes("input: unresolved") && !e.message.includes("PRIVATE_SENTINEL"));
+});
+test("HTTP clarification exposes only choice fields and retries still consume live allowance", async () => {
+  const id="00000000-0000-4000-8000-000000000001";
+  const server=createServer({enableLive:true,maxLivePlans:2,runPlan:async()=>decodeEnvelope(JSON.stringify({status:"needs_input",resolution:{issues:[{field:"signals",input:"Spirited Away",kind:"ambiguous",candidates:[{id,name:"Spirited Away",type:"urn:entity:movie",release_year:2001,description:"PRIVATE_SENTINEL"}]}]}}),"recommend")});
+  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  const origin=`http://127.0.0.1:${server.address().port}`;
+  try {
+    for(let i=0;i<3;i++) {
+      const response=await fetch(origin+"/api/plan",{method:"POST",headers:{"Content-Type":"application/json",Origin:origin},body:JSON.stringify({...base(),mode:"live",selections:i?{"Spirited Away":id}:{}})});
+      const body=await response.json();
+      assert.equal(response.status,i<2?422:429);
+      if(i<2) assert.equal(body.clarifications[0].choices[0].id,id);
+      else assert.equal(body.code,"LIVE_BUDGET");
+      assert(!JSON.stringify(body).includes("PRIVATE_SENTINEL"));
+    }
+  } finally {await new Promise(resolve=>server.close(resolve));}
 });
 test("ambiguity diagnostics expose only bounded counts and fixed category labels", () => {
   const candidates = [

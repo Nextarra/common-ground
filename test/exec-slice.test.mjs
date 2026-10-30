@@ -6,6 +6,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { runQlooExec } from "../vendor/qloo-exec/exec.js";
+import { plan } from "../engine.mjs";
+import { QlooAdapter, decodeEnvelope } from "../qloo.mjs";
 import { createDirectQlooWorkflowExecutor } from "../vendor/qloo-exec/qloo-tools.js";
 import {
   StrictQlooClient,
@@ -51,6 +53,71 @@ test("event endpoint is explicit and cannot widen key transmission", async () =>
   for (const baseUrl of ["https://evil.example", "http://hackathon.api.qloo.com", "https://hackathon.api.qloo.com.evil.example", "https://api.qloo.com/path"]) {
     assert.throws(() => new StrictQlooClient({ apiKey: "fixture", baseUrl, allowCustomBaseUrl: true }), { code: "QLOO_CONFIGURATION_ERROR" });
   }
+});
+test("film scoping and explicit choices preserve distinct matches and reject stale IDs", async () => {
+  const calls = [];
+  const client = { searchEntities: async query => {
+    calls.push(query);
+    return {results:[
+      {entity_id:SIGNAL,name:query.query,type:"urn:entity:movie",properties:{release_year:2001}},
+      {entity_id:A,name:query.query,type:"urn:entity:movie",properties:{release_year:2023}},
+      {entity_id:B,name:query.query,type:"urn:entity:book"},
+    ].filter(row=>!query.types||query.types===row.type)};
+  }};
+  const context = {signal:new AbortController().signal,correlationId:"fixture"};
+  const unresolved = await createAppResolutionProvider(client).resolveEntities({inputs:["Spirited Away","The Grand Budapest Hotel","Dune"]},context);
+  assert.deepEqual(calls.map(x=>x.types),["urn:entity:movie","urn:entity:movie",undefined]);
+  assert.deepEqual(unresolved.outcomes.map(x=>x.status),["ambiguous","ambiguous","ambiguous"]);
+  const picked = await createAppResolutionProvider(client,{"Spirited Away":A}).resolveEntities({inputs:["Spirited Away"]},context);
+  assert.equal(picked.outcomes[0].selected.id,A);
+  const wrongCategory = await createAppResolutionProvider(client,{"Spirited Away":B}).resolveEntities({inputs:["Spirited Away"]},context);
+  assert.equal(wrongCategory.outcomes[0].status,"ambiguous");
+  const stale = await createAppResolutionProvider(client,{"Spirited Away":"00000000-0000-4000-8000-000000000099"}).resolveEntities({inputs:["Spirited Away"]},context);
+  assert.equal(stale.outcomes[0].status,"ambiguous");
+  const book = await createAppResolutionProvider(client,{Dune:B}).resolveEntities({inputs:["Dune"]},context);
+  assert.equal(book.outcomes[0].selected.type,"urn:entity:book");
+});
+test("rank identifiers use one batch while missing and duplicate entities remain unresolved", async () => {
+  let calls=0;
+  const client={entities:async ids=>{calls++;assert.deepEqual(ids,[SIGNAL,A,B]);return {results:[{entity_id:SIGNAL,name:"One",type:"urn:entity:place"},{entity_id:A,name:"Two",type:"urn:entity:place"},{entity_id:A,name:"Other Two",type:"urn:entity:place"}]};},searchEntities:async()=>{throw new Error("Unexpected search");}};
+  const {outcomes}=await createAppResolutionProvider(client).resolveEntities({inputs:[SIGNAL,A,B],type:"urn:entity:place"},{});
+  assert.equal(calls,1);
+  assert.deepEqual(outcomes.map(x=>x.status),["resolved","ambiguous","not_found"]);
+});
+test("HTTP queue serializes requests, captures safe retry delay and stops after 429", async () => {
+  let active=0,peak=0,calls=0;
+  const client=new StrictQlooClient({apiKey:"DUMMY",fetch:async()=>{
+    active++;peak=Math.max(peak,active);calls++;
+    await new Promise(r=>setTimeout(r,5));active--;
+    return new Response(JSON.stringify({error:"PRIVATE_SENTINEL"}),{status:429,headers:{'Retry-After':'120','X-Private':'PRIVATE_SENTINEL'}});
+  }});
+  const results=await Promise.allSettled([client.searchEntities({query:"one"}),client.searchEntities({query:"two"})]);
+  assert(results.every(x=>x.status==="rejected"));assert.equal(calls,1);assert.equal(peak,1);
+  assert.deepEqual(client.readDiagnostics(),[{path:"/search",status:429,retryAfterMs:120000}]);
+});
+test("complete mocked two-person workflow uses fourteen serialized HTTP requests",async()=>{
+  const names=["Khruangbin","Miles Davis","Spirited Away","The Grand Budapest Hotel"];
+  const ids=Array.from({length:10},(_,i)=>`00000000-0000-4000-8000-${String(i+1).padStart(12,"0")}`);
+  const places=ids.slice(4).map((id,i)=>row(id,`Fixture place ${i}`,1-i/10));
+  const paths=[];let active=0,peak=0;
+  const adapter=new QlooAdapter(async(operation,input,options)=>{
+    const client=new StrictQlooClient({apiKey:"DUMMY",fetch:async url=>{
+      active++;peak=Math.max(peak,active);const u=new URL(url);paths.push(u.pathname);
+      await new Promise(r=>setTimeout(r,1));active--;
+      let results;
+      if(u.pathname==="/search") {const name=u.searchParams.get("query");results=[{entity_id:ids[names.indexOf(name)],name,type:u.searchParams.get("types")}];}
+      else if(u.pathname==="/entities") results=places.filter(p=>u.searchParams.get("entity_ids").includes(p.entity_id));
+      else results=places;
+      return new Response(JSON.stringify({results}),{status:200});
+    }});
+    const executor=createDirectQlooWorkflowExecutor(client,undefined,createAppResolutionProvider(client,options.selections));
+    let output="";
+    assert.equal(await runQlooExec([operation,"--input",JSON.stringify(input)],{createExecutor:()=>executor,writeOut:t=>output+=t,writeError:()=>{}}),0);
+    return decodeEnvelope(output,operation);
+  });
+  const result=await plan({people:[{signals:names.slice(0,2)},{signals:names.slice(2)}],floor:0,fairness:80},adapter);
+  assert.equal(result.mode,"live");assert.equal(result.candidates.length,6);
+  assert.equal(paths.length,14);assert.equal(paths.filter(p=>p==="/entities").length,2);assert.equal(peak,1);
 });
 const row = (id, name, affinity) => ({
   entity_id: id,
