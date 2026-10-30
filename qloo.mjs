@@ -1,10 +1,10 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { Problem, relativeRankPoints } from "./engine.mjs";
+import { Problem, relativeRankPoints, signals } from "./engine.mjs";
 const exec = promisify(execFile);
 const bin = fileURLToPath(new URL("./qloo-exec.mjs", import.meta.url));
-export function decodeEnvelope(text) {
+export function decodeEnvelope(text, operation) {
   let e;
   try {
     e = JSON.parse(text);
@@ -17,11 +17,22 @@ export function decodeEnvelope(text) {
       "Qloo returned an invalid result envelope.",
       502,
     );
-  if (e.status === "needs_input")
+  if (e.status === "needs_input") {
+    // Only fixed stage/status labels and our public seed names cross this boundary.
+    // Never echo provider summaries, candidate metadata, headers or arbitrary input.
+    const stage = operation === "recommend" ? "discovery" : operation === "rank" ? "ranking" : "resolution";
+    const issues = Array.isArray(e.resolution?.issues) ? e.resolution.issues.slice(0, 6) : [];
+    const details = issues.map((issue) => {
+      const subject = issue?.field === "options" ? "place identifier" :
+        issue?.field === "signals" && signals.includes(issue?.input) ? issue.input : "input";
+      const kind = issue?.kind === "not_found" ? "not found" : issue?.kind === "ambiguous" ? "ambiguous" : "unresolved";
+      return `${subject}: ${kind}`;
+    });
     throw new Problem(
       "CLARIFY",
-      "Qloo needs an unambiguous entity selection. Resolve the cultural signal before retrying.",
+      `Qloo ${stage} needs clarification${details.length ? ` (${[...new Set(details)].join("; ")})` : ""}. No fixture fallback was used.`,
     );
+  }
   if (!["ok", "empty"].includes(e.status))
     throw new Problem(
       "UPSTREAM",
@@ -58,7 +69,7 @@ export async function harness(operation, input, { signal } = {}) {
         cwd: fileURLToPath(new URL(".", import.meta.url)),
       },
     );
-    return decodeEnvelope(stdout);
+    return decodeEnvelope(stdout, operation);
   } catch (e) {
     if (signal?.aborted) throw signal.reason;
     if (e instanceof Problem) throw e;
