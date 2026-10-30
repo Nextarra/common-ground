@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/
+
+# Private/generated development artifacts are never publication inputs.
+evidence/
+SESSION.json
+MANIFEST.json
+*.zip
