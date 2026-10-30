@@ -12,6 +12,15 @@ const base = () => ({
   floor: 40,
   fairness: 80,
 });
+test("clarification distinguishes missing seeds from ambiguous place identifiers without echoing provider data", () => {
+  const envelope = (issues) => JSON.stringify({status:"needs_input",summary:"PRIVATE_SENTINEL",resolution:{issues}});
+  assert.throws(() => decodeEnvelope(envelope([{field:"signals",input:"Khruangbin",kind:"not_found"}]), "recommend"),
+    e => e.code === "CLARIFY" && e.message.includes("discovery") && e.message.includes("Khruangbin: not found"));
+  assert.throws(() => decodeEnvelope(envelope([{field:"options",input:"PRIVATE_SENTINEL",kind:"ambiguous",candidates:[{name:"PRIVATE_SENTINEL"}]}]), "rank"),
+    e => e.code === "CLARIFY" && e.message.includes("ranking") && e.message.includes("place identifier: ambiguous") && !e.message.includes("PRIVATE_SENTINEL"));
+  assert.throws(() => decodeEnvelope(envelope([null,{field:"signals",input:"PRIVATE_SENTINEL",kind:"PRIVATE_SENTINEL"}]), "PRIVATE_SENTINEL"),
+    e => e.code === "CLARIFY" && e.message.includes("input: unresolved") && !e.message.includes("PRIVATE_SENTINEL"));
+});
 test("fixture full loop, provenance and repeatability", async () => {
   const a = await plan(base()),
     b = await plan(base());
